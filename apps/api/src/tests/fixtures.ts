@@ -197,7 +197,7 @@ export function createMockPrismaClient(fixtures: TestEmployee[] = FIXTURE_EMPLOY
     return true;
   }
 
-  return {
+  const mockClient = {
     employee: {
       findMany: async (args: Prisma.EmployeeFindManyArgs) => {
         let results = employees.filter((emp) => matchesWhere(emp, args.where));
@@ -239,10 +239,53 @@ export function createMockPrismaClient(fixtures: TestEmployee[] = FIXTURE_EMPLOY
         const results = employees.filter((emp) => matchesWhere(emp, args?.where));
         return results.length;
       },
+
+      findUnique: async (args: Prisma.EmployeeFindUniqueArgs) => {
+        const found = employees.find((emp) => {
+          if (args.where.id && emp.id === args.where.id) return true;
+          if (args.where.email && emp.email === args.where.email) return true;
+          if (args.where.employeeCode && emp.employeeCode === args.where.employeeCode) return true;
+          return false;
+        });
+        return found ? { ...found } : null;
+      },
+
+      update: async (args: Prisma.EmployeeUpdateArgs) => {
+        const index = employees.findIndex((emp) => {
+          if (args.where.id && emp.id === args.where.id) return true;
+          if (args.where.email && emp.email === args.where.email) return true;
+          if (args.where.employeeCode && emp.employeeCode === args.where.employeeCode) return true;
+          return false;
+        });
+
+        if (index === -1) {
+          throw new Error('Record to update not found.');
+        }
+
+        const current = employees[index];
+        const data = args.data as Partial<TestEmployee>;
+        const updated: TestEmployee = {
+          ...current,
+          ...data,
+          salary: data.salary !== undefined ? new Prisma.Decimal(data.salary.toString()) : current.salary,
+          updatedAt: (data.updatedAt instanceof Date ? data.updatedAt : new Date()),
+        };
+
+        employees[index] = updated;
+        return { ...updated };
+      },
     },
 
-    $transaction: async (queries: [Promise<TestEmployee[]>, Promise<number>]) => {
-      return Promise.all(queries);
+    $transaction: async (queries: unknown) => {
+      if (Array.isArray(queries)) {
+        return Promise.all(queries);
+      }
+      if (typeof queries === 'function') {
+        return (queries as (tx: unknown) => Promise<unknown>)(mockClient);
+      }
+      return queries;
     },
   };
+
+  return mockClient;
 }

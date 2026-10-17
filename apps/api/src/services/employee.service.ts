@@ -5,6 +5,7 @@ import {
   PaginatedEmployeesResponse, 
   EmployeeResponseDto 
 } from '../types/employee.types';
+import { NotFoundError, ValidationError } from '../errors/AppError';
 
 export class EmployeeService {
   constructor(private readonly db: PrismaClient = defaultPrisma) {}
@@ -94,6 +95,61 @@ export class EmployeeService {
         hasNextPage,
         hasPreviousPage,
       },
+    };
+  }
+
+  /**
+   * Updates an employee's salary with strict currency immutability and atomic updatedAt tracking.
+   * Avoids logging sensitive salary information.
+   */
+  async updateSalary(
+    id: string,
+    salary: Prisma.Decimal,
+    requestedCurrency?: string
+  ): Promise<EmployeeResponseDto> {
+    // 1. Fetch employee to verify existence and check currency
+    const employee = await this.db.employee.findUnique({
+      where: { id },
+    });
+
+    if (!employee) {
+      throw new NotFoundError(`Employee with ID '${id}' not found.`);
+    }
+
+    // 2. Enforce currency immutability
+    if (requestedCurrency && requestedCurrency !== employee.currency) {
+      throw new ValidationError('Currency code is immutable and cannot be modified.', [
+        {
+          field: 'currency',
+          message: `Currency is immutable. Employee contract currency is '${employee.currency}'.`,
+          received: requestedCurrency,
+        },
+      ]);
+    }
+
+    // 3. Atomically update salary and updatedAt
+    const updated = await this.db.employee.update({
+      where: { id },
+      data: {
+        salary,
+        updatedAt: new Date(),
+      },
+    });
+
+    return {
+      id: updated.id,
+      employeeCode: updated.employeeCode,
+      firstName: updated.firstName,
+      lastName: updated.lastName,
+      name: updated.name,
+      email: updated.email,
+      jobTitle: updated.jobTitle,
+      department: updated.department,
+      country: updated.country,
+      currency: updated.currency,
+      salary: updated.salary.toFixed(2),
+      createdAt: updated.createdAt.toISOString(),
+      updatedAt: updated.updatedAt.toISOString(),
     };
   }
 }

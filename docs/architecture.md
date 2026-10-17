@@ -181,6 +181,44 @@ All sorting queries append a secondary `{ id: 'asc' }` tie-breaker to prevent pa
     "hasPreviousPage": false
   }
 }
+### 4.3 Implemented Salary Update API Contract (`PATCH /api/employees/:id/salary`)
+
+**Endpoint:** `PATCH /api/employees/:id/salary`  
+**Purpose:** Updates an employee's annual base salary with decimal-safe validation and currency immutability.
+
+**Request Validation Rules:**
+- **URL Parameter (`id`):** Non-empty string, trimmed, maximum 128 characters.
+- **Request Body (`salary` or alias `amount`):**
+  - Positive numeric value or numeric string.
+  - Strict range: `0.01 <= salary <= 999,999,999.99`.
+  - Precision: At most 2 decimal places (`DECIMAL(12,2)`).
+  - Rejection: Negative numbers, zero, `NaN`, exponents/scientific notation, non-numeric characters, and missing fields return `400 Bad Request`.
+- **Currency Immutability:**
+  - If `currency` is passed in the request body, it MUST match the employee's existing contract currency. Any attempt to modify the currency returns `400 Bad Request` with message: `"Currency code is immutable and cannot be modified."`
+- **Employee Existence:**
+  - If `:id` is not found, returns `404 Not Found` with message: `"Employee with ID '<id>' not found."`
+- **Sensitive Data Handling:**
+  - Salary values and compensation figures are not emitted into application access logs.
+
+**Response Body (HTTP 200 OK):**
+```json
+{
+  "data": {
+    "id": "emp-uuid-002",
+    "employeeCode": "EMP-002",
+    "firstName": "Alice",
+    "lastName": "Schmidt",
+    "name": "Alice Schmidt",
+    "email": "alice.schmidt@example.de",
+    "jobTitle": "Engineering Lead",
+    "department": "Engineering",
+    "country": "DE",
+    "currency": "EUR",
+    "salary": "98500.75",
+    "createdAt": "2024-02-01T10:00:00.000Z",
+    "updatedAt": "2026-10-17T12:00:00.000Z"
+  }
+}
 ```
 
 ---
@@ -203,12 +241,17 @@ All sorting queries append a secondary `{ id: 'asc' }` tie-breaker to prevent pa
 - **Decision:** API is unauthenticated in MVP, focusing on core performance, data fidelity, and UX.
 - **Trade-off:** Ideal for technical assessment, internal network, or VPN deployment. The architecture cleanly isolates routing in Express, allowing JWT or session middleware to be mounted at `/api/*` in post-MVP phases without refactoring business services.
 
+### 5. Salary Audit History as a Deliberate MVP Exclusion
+- **Decision:** Track compensation updates via automatic `updatedAt` timestamp on the `Employee` model in MVP, deferring historical change ledgers (`SalaryAuditLog`) to Phase P1.
+- **Rationale:** Section 3 (P1 Enhancements) and Section 5 (Decisions Requiring Approval) of `docs/requirements.md` explicitly isolate the P0 MVP boundary to sub-second exploration, currency-isolated summaries, and validated salary edits. Adding audit log tables without finalized compliance requirements would introduce premature schema coupling. Atomic timestamps fulfill MVP auditability while preserving a seamless migration path to a dedicated immutable change log table in P1.
+
 ---
 
 ## 6. Path to P0 Feature Completion
 
 With this foundation verified:
-1. **FR-1 (Exploration):** Build `/api/employees` GET endpoint with filtering/sorting/pagination and React table with debounced search.
-2. **FR-2 (Update):** Build `/api/employees/:id/salary` PATCH endpoint with precision validation and React modal/inline edit.
+1. **FR-1 (Exploration):** `/api/employees` GET endpoint with filtering/sorting/pagination completed.
+2. **FR-2 (Update):** `/api/employees/:id/salary` PATCH endpoint with precision validation completed.
 3. **FR-3 (Summaries):** Build `/api/analytics/summaries` GET endpoint with SQL `GROUP BY` and React summary cards.
-4. **FR-4 (Seeding):** Implement deterministic 10k seed script using `@faker-js/faker` or deterministic pseudo-random sequences across 5+ countries and currencies.
+4. **FR-4 (Seeding):** Implement deterministic 10k seed script using deterministic pseudo-random sequences across 5+ countries and currencies.
+

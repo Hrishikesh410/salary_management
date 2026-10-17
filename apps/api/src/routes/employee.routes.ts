@@ -7,6 +7,9 @@ export function createEmployeeRouter(controller: EmployeeController = defaultEmp
   // GET /api/employees
   router.get('/', controller.getEmployees);
 
+  // PATCH /api/employees/:id/salary
+  router.patch('/:id/salary', controller.updateSalary);
+
   return router;
 }
 
