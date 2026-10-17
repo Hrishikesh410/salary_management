@@ -1,0 +1,36 @@
+{
+  "name": "incubyte-salary-management",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Incubyte Employee Salary Management Monorepo",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "dev:api": "npm --workspace=@incubyte/api run dev",
+    "dev:web": "npm --workspace=@incubyte/web run dev",
+    "build": "npm run build --workspaces --if-present",
+    "build:api": "npm --workspace=@incubyte/api run build",
+    "build:web": "npm --workspace=@incubyte/web run build",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "typecheck:api": "npm --workspace=@incubyte/api run typecheck",
+    "typecheck:web": "npm --workspace=@incubyte/web run typecheck",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "test:api": "npm --workspace=@incubyte/api run test",
+    "test:web": "npm --workspace=@incubyte/web run test",
+    "db:generate": "npm --workspace=@incubyte/api run db:generate"
+  },
+  "keywords": [
+    "salary-management",
+    "react",
+    "vite",
+    "express",
+    "typescript",
+    "prisma",
+    "postgresql"
+  ],
+  "author": "Incubyte Team",
+  "license": "UNLICENSED"
+}
