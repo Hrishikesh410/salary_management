@@ -1,7 +1,13 @@
-import express, { Application, Request, Response, NextFunction } from 'express';
+import express, { Application, Request, Response, Router } from 'express';
 import cors from 'cors';
+import { employeeRouter as defaultEmployeeRouter } from './routes/employee.routes';
+import { errorHandler } from './middleware/errorHandler';
 
-export function createApp(): Application {
+export interface CreateAppOptions {
+  employeeRouter?: Router;
+}
+
+export function createApp(options?: CreateAppOptions): Application {
   const app: Application = express();
 
   // Standard middleware
@@ -22,7 +28,10 @@ export function createApp(): Application {
     });
   });
 
-  // 404 handler
+  // Employee read/management routes
+  app.use('/api/employees', options?.employeeRouter || defaultEmployeeRouter);
+
+  // 404 handler for unknown routes
   app.use((_req: Request, res: Response) => {
     res.status(404).json({
       error: 'Not Found',
@@ -30,15 +39,8 @@ export function createApp(): Application {
     });
   });
 
-  // Global error handler
-  app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-    // eslint-disable-next-line no-console
-    console.error('Unhandled server error:', err);
-    res.status(500).json({
-      error: 'Internal Server Error',
-      message: process.env.NODE_ENV === 'production' ? 'An unexpected error occurred.' : err.message,
-    });
-  });
+  // Centralized error handling middleware
+  app.use(errorHandler);
 
   return app;
 }

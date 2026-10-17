@@ -111,21 +111,75 @@ sequenceDiagram
 ### Indexing Scheme
 ```prisma
 model Employee {
-  id         String   @id @default(uuid())
-  name       String
-  email      String   @unique
-  jobTitle   String
-  department String
-  country    String
-  currency   String   // ISO 4217 (e.g., USD, EUR, GBP, INR, JPY)
-  salary     Decimal  @db.Decimal(12, 2)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id           String   @id @default(uuid())
+  employeeCode String   @unique
+  firstName    String
+  lastName     String
+  name         String
+  email        String   @unique
+  jobTitle     String
+  department   String
+  country      String
+  currency     String   // ISO 4217 (e.g., USD, EUR, GBP, INR, JPY)
+  salary       Decimal  @db.Decimal(12, 2)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@index([department])
   @@index([country])
   @@index([currency])
+  @@index([employeeCode])
+  @@index([firstName])
+  @@index([lastName])
   @@index([name])
+  @@index([email])
+}
+```
+
+### 4.2 Implemented Employee Read API Contract (`GET /api/employees`)
+
+| Parameter | Type | Default | Validation & Rules |
+| :--- | :--- | :--- | :--- |
+| `search` (or `q`) | String | — | Max 100 chars. Case-insensitive search across `employeeCode`, `firstName`, `lastName`, `name`, and `email`. |
+| `country` | String | — | Max 100 chars. Exact/case-insensitive match on employee's country. |
+| `department` | String | — | Max 100 chars. Exact/case-insensitive match on employee's department. |
+| `currency` | String | — | Optional 3-letter ISO 4217 code (e.g. `USD`, `EUR`, `GBP`). |
+| `page` | Integer | `1` | Must be an integer `>= 1`. |
+| `limit` | Integer | `25` | Must be an integer between `1` and `100`. |
+| `sortBy` | String | `name` | Allowlisted: `name`, `firstName`, `lastName`, `employeeCode`, `department`, `country`, `salary`, `createdAt`. |
+| `sortOrder` | String | `asc` | Allowlisted: `asc`, `desc`. |
+
+**Deterministic Tie-Breaker:**  
+All sorting queries append a secondary `{ id: 'asc' }` tie-breaker to prevent pagination jitter when primary sort values are identical.
+
+**Pagination Metadata Response:**
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "employeeCode": "EMP-001",
+      "firstName": "John",
+      "lastName": "Doe",
+      "name": "John Doe",
+      "email": "john.doe@example.com",
+      "jobTitle": "Senior Software Engineer",
+      "department": "Engineering",
+      "country": "US",
+      "currency": "USD",
+      "salary": "125000.00",
+      "createdAt": "2024-01-15T10:00:00.000Z",
+      "updatedAt": "2024-01-15T10:00:00.000Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 25,
+    "totalCount": 10000,
+    "totalPages": 400,
+    "hasNextPage": true,
+    "hasPreviousPage": false
+  }
 }
 ```
 
